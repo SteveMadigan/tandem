@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Tandem.Model;
 using Tandem.Requests;
@@ -22,25 +19,35 @@ namespace Tandem.Controllers
             _userRepository = userRepository;
         }
 
-        [HttpGet]
-        public GetUserResponse GetUser(string emailAddress)
+        [HttpGet("{emailAddress}")]
+        public async Task<ActionResult<GetUserResponse>> GetUser(string emailAddress)
         {
-            var user =  _userRepository.GetByEmail(emailAddress);
-            var response = Mapper.MapFrom<User, GetUserResponse>(user);
-
-            return response;
+            var user =  await _userRepository.GetByEmail(emailAddress);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                var response = Mapper.MapFrom<User, GetUserResponse>(user);
+                return Ok(response);
+            }
         }
 
         [HttpPost]
-        public CreateUserResponse CreateUser(CreateUserRequest request)
+        public async Task<ActionResult<CreateUserRequest>> CreateUser(CreateUserRequest request)
         {
             var user = Mapper.MapFrom<CreateUserRequest, User>(request);
-            var id =  _userRepository.CreateUser(user);
+            var id =  await _userRepository.CreateUser(user);
 
-            return new CreateUserResponse
+            if (id == null)
             {
-                Id = id
-            };
+                return Conflict();
+            }
+            else
+            {
+                return CreatedAtAction(nameof(GetUser), new {emailAddress = request.EmailAddress}, request);
+            }
         }
 
 
